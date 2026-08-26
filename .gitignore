@@ -1,0 +1,52 @@
+# On-Premises PDF Document Search Engine — .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Data — exclude uploaded PDFs and generated indexes from version control
+data/pdfs/
+data/index/
+data/extracted/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Model cache (Sentence Transformers / HuggingFace)
+.cache/
+~/.cache/huggingface/
+*.bin
+*.safetensors
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+htmlcov/
+.coverage

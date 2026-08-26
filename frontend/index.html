@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Search Assistant</title>
+  <meta name="description" content="Search your PDF documents locally using hybrid keyword and semantic AI search — fully on-premises, no cloud required." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+            <path d="M9 8h10l4 4v12H9V8z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M19 8v4h4" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+            <circle cx="20" cy="20" r="5" fill="url(#searchGrad)"/>
+            <path d="M23.5 23.5l2 2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="20" cy="20" r="3" stroke="#fff" stroke-width="1" fill="none"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#4F46E5"/>
+                <stop offset="1" stop-color="#7C3AED"/>
+              </linearGradient>
+              <linearGradient id="searchGrad" x1="15" y1="15" x2="25" y2="25" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#4F46E5"/>
+                <stop offset="1" stop-color="#7C3AED"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">PDF Search Assistant</span>
+          <span class="logo-subtitle">Search your documents using keyword and semantic search</span>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span id="health-badge" class="badge badge--purple">Checking status...</span>
+        <button class="btn btn--ghost btn--icon" id="settings-btn" aria-label="Settings" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Hidden settings dropdown -->
+    <div id="settings-dropdown" class="settings-dropdown hidden">
+      <div class="search-options">
+        <div class="option-group">
+          <label class="option-label" for="top-k-input">Results</label>
+          <select id="top-k-input" class="option-select" aria-label="Number of results">
+            <option value="1">Top 1</option>
+            <option value="3" selected>Top 3</option>
+            <option value="5">Top 5</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label class="option-label" for="kw-weight-input">Keyword Weight</label>
+          <div class="range-wrap">
+            <input type="range" id="kw-weight-input" class="option-range" min="0" max="1" step="0.1" value="0.4" aria-label="Keyword weight" />
+            <span class="option-range-val" id="kw-weight-val">0.4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <main class="layout">
+
+    <!-- ===== LEFT SIDEBAR ===== -->
+    <aside class="sidebar">
+      <!-- Documents List -->
+      <section class="card documents-card" aria-labelledby="docs-heading">
+        <div class="card-header">
+          <h2 id="docs-heading" class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            DOCUMENTS
+          </h2>
+          <span class="doc-count" id="doc-count">0</span>
+        </div>
+        <div class="doc-list" id="doc-list" role="list">
+          <p class="empty-state" id="doc-empty">No documents uploaded yet.</p>
+        </div>
+        
+        <!-- Upload Trigger in Sidebar -->
+        <button class="btn btn--ghost btn--full sidebar-upload-btn" id="sidebar-upload-trigger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload PDF
+        </button>
+      </section>
+    </aside>
+
+    <!-- ===== RIGHT CHAT PANEL ===== -->
+    <section class="chat-panel">
+      <!-- Chat History Area -->
+      <div class="chat-history" id="chat-history">
+        <!-- Empty State / Welcome -->
+        <div class="chat-empty-state" id="chat-empty-state">
+          <div class="empty-icon">📄</div>
+          <h2>PDF Search Assistant</h2>
+          <p>Ask questions about your PDF documents.</p>
+          <p class="empty-subtitle">Upload a document and start searching.</p>
+          <button class="btn btn--primary empty-upload-btn" id="empty-upload-trigger">Upload PDF</button>
+          
+          <div class="suggested-queries">
+            <p>Try asking:</p>
+            <button class="suggested-btn">"What is the leave policy?"</button>
+            <button class="suggested-btn">"What is the password policy?"</button>
+            <button class="suggested-btn">"What are the working hours?"</button>
+          </div>
+        </div>
+        <!-- Loading indicator (hidden by default) -->
+        <div id="typing-indicator" class="typing-indicator hidden">
+          <div class="chat-bubble assistant">
+            <div class="typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="typing-text">Searching your documents...</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Hidden File Input for PDF Upload -->
+      <input type="file" id="file-input" accept=".pdf,application/pdf" hidden />
+
+      <!-- Upload progress indicator (hidden by default) -->
+      <div id="upload-progress-indicator" class="upload-progress-indicator hidden">
+        <div class="spinner"></div>
+        <span id="upload-progress-text">Uploading...</span>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-container">
+        <div class="chat-input-wrapper">
+          <button class="icon-btn upload-icon-btn" id="chat-upload-trigger" title="Upload PDF">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <textarea 
+            id="chat-input" 
+            class="chat-input" 
+            placeholder="Ask something..." 
+            rows="1"
+            aria-label="Ask a question"
+          ></textarea>
+          <button type="button" class="icon-btn send-icon-btn" id="send-btn" title="Send" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="chat-footer-hint">Press Enter to send, Shift + Enter for new line</div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ===== PDF VIEWER MODAL ===== -->
+  <div class="modal-overlay hidden" id="pdf-modal" role="dialog" aria-modal="true" aria-label="PDF Viewer">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">PDF Viewer</h3>
+        <button class="btn btn--ghost btn--sm modal-close" id="modal-close-btn" aria-label="Close PDF viewer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <iframe
+          id="pdf-iframe"
+          title="PDF Document Viewer"
+          class="pdf-iframe"
+          src="about:blank"
+          aria-label="Embedded PDF viewer"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
