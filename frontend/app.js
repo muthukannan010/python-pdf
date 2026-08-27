@@ -172,11 +172,22 @@ async function loadDocuments() {
     if (docs.length === 0) {
       empty.classList.remove('hidden');
       list.querySelectorAll('.doc-item').forEach(el => el.remove());
+      
+      const subtitle = document.querySelector('.empty-subtitle');
+      if (subtitle) subtitle.textContent = 'Upload a document and start searching.';
+      const uploadBtn = document.getElementById('empty-upload-trigger');
+      if (uploadBtn) uploadBtn.classList.remove('hidden');
+      
       return;
     }
 
     empty.classList.add('hidden');
     list.querySelectorAll('.doc-item').forEach(el => el.remove());
+    
+    const subtitle = document.querySelector('.empty-subtitle');
+    if (subtitle) subtitle.textContent = 'Your documents are ready. Ask a question below!';
+    const uploadBtn = document.getElementById('empty-upload-trigger');
+    if (uploadBtn) uploadBtn.classList.add('hidden');
 
     docs.forEach(doc => {
       const item = document.createElement('div');

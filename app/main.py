@@ -1,6 +1,7 @@
 import logging
 import sys
 import webbrowser
+import shutil
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -34,6 +35,11 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("  PDF Document Search Engine - Starting up")
     logger.info("=" * 60)
+
+    # clean up old data so the app starts fresh every time
+    if settings.DATA_DIR.exists():
+        logger.info("Cleaning up old data directory...")
+        shutil.rmtree(settings.DATA_DIR, ignore_errors=True)
 
     # make sure data folders exist
     settings.ensure_directories()
