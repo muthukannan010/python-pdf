@@ -403,6 +403,25 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closePdfViewer();
 });
 
+// --- Info / Criteria Modal ---
+function setupCriteriaModal() {
+  const modal = document.getElementById('criteria-modal');
+  const btn = document.getElementById('info-btn');
+  const closeBtn = document.getElementById('criteria-close-btn');
+
+  if (btn) {
+    btn.addEventListener('click', () => modal.classList.remove('hidden'));
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  }
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.add('hidden');
+    });
+  }
+}
+
 // make available for inline onclick handlers
 window.openPdfViewer = openPdfViewer;
 
@@ -410,6 +429,7 @@ window.openPdfViewer = openPdfViewer;
 document.addEventListener('DOMContentLoaded', async () => {
   setupFileInput();
   setupSettings();
+  setupCriteriaModal();
   setupChatControls();
   await checkHealth();
   await loadDocuments();
