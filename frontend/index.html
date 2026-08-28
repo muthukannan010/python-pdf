@@ -43,6 +43,11 @@
       </div>
       <div class="header-badges">
         <span id="health-badge" class="badge badge--purple">Checking status...</span>
+        
+        <button class="btn btn--ghost btn--icon" id="info-btn" aria-label="Acceptance Criteria" title="Acceptance Criteria">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
+
         <button class="btn btn--ghost btn--icon" id="settings-btn" aria-label="Settings" title="Settings">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         </button>
@@ -176,6 +181,30 @@
           src="about:blank"
           aria-label="Embedded PDF viewer"
         ></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ACCEPTANCE CRITERIA MODAL ===== -->
+  <div class="modal-overlay hidden" id="criteria-modal" role="dialog" aria-modal="true" aria-label="Acceptance Criteria">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Acceptance Criteria</h3>
+        <button class="btn btn--ghost btn--sm modal-close" id="criteria-close-btn" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1rem; color: var(--text-secondary); line-height: 1.5;">
+        <ul style="padding-left: 1.2rem; margin-bottom: 1rem;">
+          <li><b>PDF Upload:</b> Users can successfully upload a PDF document through the application interface.</li>
+          <li><b>Text Extraction:</b> The application accurately extracts text content from the uploaded PDF document.</li>
+          <li><b>Indexing:</b> The extracted text is properly indexed (both keyword and semantic vector indexing) to allow for efficient searching.</li>
+          <li><b>Fresh State on Startup:</b> Each time the application is started, the previous data and documents are cleared so the app begins in a fresh state.</li>
+          <li><b>Relevant Passages:</b> When a user submits a query, the application returns passages that are highly relevant to the search intent.</li>
+          <li><b>Correct Attribution:</b> Search results accurately point to the correct pages within the document where the passages are found.</li>
+          <li><b>Document Metadata:</b> Each search result clearly includes both the source document name and the specific page reference.</li>
+          <li><b>Offline Capability:</b> After the initial setup (and downloading of any necessary local models), the entire system works offline without internet access.</li>
+        </ul>
       </div>
     </div>
   </div>
