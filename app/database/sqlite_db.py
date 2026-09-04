@@ -2,6 +2,7 @@
 
 import logging
 import sqlite3
+import json
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -60,6 +61,7 @@ class SQLiteDB:
                     page_number   INTEGER NOT NULL,
                     text          TEXT NOT NULL,
                     source_path   TEXT NOT NULL,
+                    locations     TEXT NOT NULL,
                     FOREIGN KEY (document_id) REFERENCES documents(document_id) ON DELETE CASCADE
                 )
             """)
@@ -137,7 +139,8 @@ class SQLiteDB:
         ]
         meta_rows = [
             (c["chunk_id"], c["document_id"], c["document_name"],
-             c["page_number"], c["text"], c["source_path"])
+             c["page_number"], c["text"], c["source_path"],
+             json.dumps(c.get("locations", [])))
             for c in chunks
         ]
         with self._connect() as conn:
@@ -149,8 +152,8 @@ class SQLiteDB:
             )
             conn.executemany(
                 """INSERT OR REPLACE INTO chunk_meta
-                   (chunk_id, document_id, document_name, page_number, text, source_path)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                   (chunk_id, document_id, document_name, page_number, text, source_path, locations)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 meta_rows,
             )
             conn.commit()
@@ -164,22 +167,27 @@ class SQLiteDB:
             row = conn.execute(
                 "SELECT * FROM chunk_meta WHERE chunk_id = ?", (chunk_id,)
             ).fetchone()
-        return dict(row) if row else None
+        if row:
+            res = dict(row)
+            res["locations"] = json.loads(res["locations"]) if res.get("locations") else []
+            return res
+        return None
 
     # --- Keyword search ---
 
     def keyword_search(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
-        """Run an FTS5 query and return matching chunks."""
+        """Run an FTS5 query and return matching chunks with metadata."""
         if not query.strip():
             return []
 
         sql = """
             SELECT
-                chunk_id, document_id, document_name,
-                CAST(page_number AS INTEGER) AS page_number,
-                text, source_path
-            FROM chunks
-            WHERE chunks MATCH ?
+                c.chunk_id, c.document_id, c.document_name,
+                CAST(c.page_number AS INTEGER) AS page_number,
+                c.text, c.source_path, m.locations
+            FROM chunks c
+            JOIN chunk_meta m ON c.chunk_id = m.chunk_id
+            WHERE c.chunks MATCH ?
             LIMIT ?
         """
         try:
@@ -189,6 +197,11 @@ class SQLiteDB:
             logger.warning("Keyword search error (query=%r): %s", query, exc)
             return []
 
-        results = [dict(r) for r in rows]
+        results = []
+        for r in rows:
+            d = dict(r)
+            d["locations"] = json.loads(d["locations"]) if d.get("locations") else []
+            results.append(d)
+            
         logger.debug("Keyword search returned %d results for query=%r", len(results), query)
         return results

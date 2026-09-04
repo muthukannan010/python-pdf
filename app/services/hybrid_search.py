@@ -73,6 +73,7 @@ class HybridSearchService:
                 "semantic_score": 0.0,
                 "matched_keywords": r.get("matched_keywords", []),
                 "unmatched_keywords": r.get("unmatched_keywords", []),
+                "locations": r.get("locations", []),
             }
 
         for r in sem_results:
@@ -81,6 +82,9 @@ class HybridSearchService:
                 # chunk already found by keyword search, just add semantic score
                 merged[cid]["semantic_score"] = r.get("semantic_score", 0.0)
             else:
+                # fetch locations from sqlite since FAISS doesn't store them
+                chunk_meta = self._kw._db.get_chunk_by_id(cid)
+                locs = chunk_meta.get("locations", []) if chunk_meta else []
                 merged[cid] = {
                     "chunk_id": cid,
                     "document_name": r.get("document_name", ""),
@@ -91,6 +95,7 @@ class HybridSearchService:
                     "semantic_score": r.get("semantic_score", 0.0),
                     "matched_keywords": [],
                     "unmatched_keywords": [],
+                    "locations": locs,
                 }
 
         # compute final hybrid score and tag the search type

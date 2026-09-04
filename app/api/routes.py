@@ -215,6 +215,7 @@ async def search(
             source_path=r["source_path"],
             matched_keywords=r.get("matched_keywords", []),
             unmatched_keywords=r.get("unmatched_keywords", []),
+            locations=r.get("locations", []),
         )
         for r in result["results"]
     ]
