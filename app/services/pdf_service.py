@@ -57,7 +57,7 @@ def save_pdf(data: bytes, document_id: str) -> Path:
 def extract_text_from_pdf(pdf_path: Path) -> List[Dict[str, Any]]:
     """
     Extract text from each page of a PDF using PyMuPDF.
-    Returns a list of dicts with keys: document, page, text
+    Returns a list of dicts with keys: document, page, text, words
     """
     try:
         doc = fitz.open(str(pdf_path))
@@ -74,12 +74,22 @@ def extract_text_from_pdf(pdf_path: Path) -> List[Dict[str, Any]]:
     pages = []
     for i in range(total_pages):
         page = doc.load_page(i)
-        text = page.get_text("text").strip()
+        
+        # Get raw words: list of (x0, y0, x1, y1, "word", block_no, line_no, word_no)
+        raw_words = page.get_text("words")
+        
+        # Sort words top-to-bottom, left-to-right loosely (blocks then lines then words)
+        raw_words.sort(key=lambda w: (w[5], w[6], w[7]))
+        
+        text = " ".join(w[4] for w in raw_words).strip()
+        words = [{"text": w[4], "bbox": [w[0], w[1], w[2], w[3]]} for w in raw_words]
+        
         if text:
             pages.append({
                 "document": pdf_path.name,
                 "page": i + 1,   # 1-based
                 "text": text,
+                "words": words,
             })
 
     doc.close()

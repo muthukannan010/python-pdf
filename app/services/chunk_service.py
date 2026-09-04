@@ -12,7 +12,7 @@ def _make_chunk_id(document_id: str, page: int, index: int) -> str:
 
 
 def chunk_page_text(
-    text: str,
+    words_list: List[Dict[str, Any]],
     document_id: str,
     document_name: str,
     page_number: int,
@@ -21,16 +21,18 @@ def chunk_page_text(
     chunk_overlap: int = settings.CHUNK_OVERLAP,
     chunk_index_start: int = 0,
 ) -> List[Dict[str, Any]]:
-    """Split a page's text into overlapping word-based chunks."""
-    words = text.split()
+    """Split a page's words into overlapping word-based chunks."""
     chunks = []
     step = max(1, chunk_size - chunk_overlap)
     idx = chunk_index_start
 
     start = 0
-    while start < len(words):
-        end = min(start + chunk_size, len(words))
-        chunk_text = " ".join(words[start:end]).strip()
+    while start < len(words_list):
+        end = min(start + chunk_size, len(words_list))
+        chunk_words = words_list[start:end]
+        
+        chunk_text = " ".join(w["text"] for w in chunk_words).strip()
+        chunk_locations = [{"text": w["text"], "bbox": w["bbox"]} for w in chunk_words]
 
         if chunk_text:
             chunks.append({
@@ -40,10 +42,11 @@ def chunk_page_text(
                 "page_number": page_number,
                 "text": chunk_text,
                 "source_path": source_path,
+                "locations": chunk_locations,
             })
             idx += 1
 
-        if end == len(words):
+        if end == len(words_list):
             break
         start += step
 
@@ -65,12 +68,13 @@ def create_chunks_from_pages(
     for page_data in pages:
         page_number = page_data["page"]
         text = page_data["text"]
+        words = page_data.get("words", [])
 
-        if not text.strip():
+        if not text.strip() or not words:
             continue
 
         page_chunks = chunk_page_text(
-            text=text,
+            words_list=words,
             document_id=document_id,
             document_name=document_name,
             page_number=page_number,

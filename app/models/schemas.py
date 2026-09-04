@@ -44,6 +44,11 @@ class SearchRequest(BaseModel):
     )
 
 
+class HighlightLocation(BaseModel):
+    text: str
+    bbox: List[float]
+
+
 class SearchResult(BaseModel):
     chunk_id: str
     document_name: str
@@ -55,6 +60,7 @@ class SearchResult(BaseModel):
     source_path: str
     matched_keywords: List[str] = Field(default_factory=list)
     unmatched_keywords: List[str] = Field(default_factory=list)
+    locations: List[HighlightLocation] = Field(default_factory=list)
 
 
 class SearchResponse(BaseModel):

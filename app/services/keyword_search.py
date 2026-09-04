@@ -97,6 +97,17 @@ class KeywordSearchService:
                 c["unmatched_keywords"] = unmatched
                 c["text"] = snippet
                 c.pop("raw_rank", None)
+                
+                # filter locations to only include matched keywords
+                if "locations" in c:
+                    filtered_locs = []
+                    for loc in c["locations"]:
+                        loc_text = loc["text"].lower()
+                        # check if any matched kw is in this loc's text
+                        if any(kw in loc_text for kw in matched):
+                            filtered_locs.append(loc)
+                    c["locations"] = filtered_locs
+                    
                 results.append(c)
 
         # sort by score, highest first

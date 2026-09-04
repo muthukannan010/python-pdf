@@ -313,6 +313,7 @@ function appendAssistantMessage(results) {
     safeText = safeText.replace(/\[\[MARK\]\]/g, '<mark>').replace(/\[\[\/MARK\]\]/g, '</mark>');
 
     const docId = r.source_path.replace('data/pdfs/', '').replace('.pdf', '');
+    const encodedLocs = encodeURIComponent(JSON.stringify(r.locations || []));
 
     bubble.innerHTML = `
       <div class="chat-bubble assistant">
@@ -325,7 +326,7 @@ function appendAssistantMessage(results) {
           </div>
         </div>
         ${safeText}
-        <button class="btn btn--ghost btn--sm" style="display: block; margin-top: 0.5rem;" onclick="openPdfViewer('${encodeURIComponent(docId)}', ${r.page_number}, '${escapeHtml(r.document_name)}')">
+        <button class="btn btn--ghost btn--sm" style="display: block; margin-top: 0.5rem;" onclick="openPdfViewer('${encodeURIComponent(docId)}', ${r.page_number}, '${escapeHtml(r.document_name)}', '${encodedLocs}')">
           [ View Page ${r.page_number} ]
         </button>
       </div>
@@ -379,20 +380,92 @@ async function performSearch() {
 }
 
 // --- PDF Viewer Modal ---
-function openPdfViewer(encodedDocId, pageNumber, docName) {
+function openPdfViewer(encodedDocId, pageNumber, docName, encodedLocs = '[]') {
   const modal = document.getElementById('pdf-modal');
-  const iframe = document.getElementById('pdf-iframe');
   const title = document.getElementById('modal-title');
+  const locations = JSON.parse(decodeURIComponent(encodedLocs));
 
   title.textContent = `${docName} — Page ${pageNumber}`;
-  iframe.src = `${API}/documents/${encodedDocId}/view#page=${pageNumber}`;
   modal.classList.remove('hidden');
+  
+  const pdfUrl = `${API}/documents/${encodedDocId}/view`;
+  renderPdfPage(pdfUrl, pageNumber, locations);
+  
   document.getElementById('modal-close-btn').focus();
 }
 
+let currentPdfTask = null;
+
+async function renderPdfPage(url, pageNum, locations) {
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+  const layer = document.getElementById('pdf-highlights-layer');
+  
+  layer.innerHTML = '';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  try {
+    if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+       window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/lib/pdf.worker.min.js';
+    }
+    
+    currentPdfTask = window.pdfjsLib.getDocument(url);
+    const pdfDoc = await currentPdfTask.promise;
+    const page = await pdfDoc.getPage(pageNum);
+    
+    const scale = 1.5;
+    const viewport = page.getViewport({ scale: scale });
+    
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    
+    const renderContext = {
+      canvasContext: ctx,
+      viewport: viewport
+    };
+    await page.render(renderContext).promise;
+    
+    locations.forEach(loc => {
+      const bbox = loc.bbox;
+      const x0 = bbox[0] * scale;
+      const y0 = bbox[1] * scale;
+      const x1 = bbox[2] * scale;
+      const y1 = bbox[3] * scale;
+      
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      div.style.left = `${x0}px`;
+      div.style.top = `${y0}px`;
+      div.style.width = `${Math.max(x1 - x0, 2)}px`;
+      div.style.height = `${Math.max(y1 - y0, 2)}px`;
+      div.style.backgroundColor = 'rgba(255, 226, 0, 0.4)';
+      div.style.border = '1px solid rgba(255, 200, 0, 0.8)';
+      div.style.borderRadius = '2px';
+      layer.appendChild(div);
+    });
+    
+    // attempt to scroll into view of the first highlight
+    if (locations.length > 0) {
+        const container = document.getElementById('pdf-viewer-container');
+        const firstBbox = locations[0].bbox;
+        // scroll container so the highlight is somewhat centered
+        container.scrollTop = Math.max(0, (firstBbox[1] * scale) - (container.clientHeight / 2));
+    }
+    
+  } catch (err) {
+    console.error('Error rendering PDF:', err);
+  }
+}
+
 function closePdfViewer() {
+  if (currentPdfTask) {
+      currentPdfTask.destroy();
+      currentPdfTask = null;
+  }
   document.getElementById('pdf-modal').classList.add('hidden');
-  document.getElementById('pdf-iframe').src = 'about:blank';
+  const canvas = document.getElementById('pdf-canvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById('pdf-highlights-layer').innerHTML = '';
 }
 
 document.getElementById('modal-close-btn').addEventListener('click', closePdfViewer);
