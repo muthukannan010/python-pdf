@@ -6,31 +6,31 @@ from app.services.chunk_service import chunk_page_text, create_chunks_from_pages
 
 class TestChunkPageText:
 
-    def _make_words(self, n):
-        return " ".join(f"word{i}" for i in range(n))
+    def _make_words_list(self, n):
+        return [{"text": f"word{i}", "bbox": [0, 0, 10, 10]} for i in range(n)]
 
     def test_short_text_produces_one_chunk(self):
-        text = self._make_words(50)
+        words_list = self._make_words_list(50)
         chunks = chunk_page_text(
-            text=text, document_id="doc1", document_name="doc1.pdf",
+            words_list=words_list, document_id="doc1", document_name="doc1.pdf",
             page_number=1, source_path="data/pdfs/doc1.pdf",
             chunk_size=600, chunk_overlap=100,
         )
         assert len(chunks) == 1
 
     def test_long_text_produces_multiple_chunks(self):
-        text = self._make_words(1500)
+        words_list = self._make_words_list(1500)
         chunks = chunk_page_text(
-            text=text, document_id="doc1", document_name="doc1.pdf",
+            words_list=words_list, document_id="doc1", document_name="doc1.pdf",
             page_number=1, source_path="data/pdfs/doc1.pdf",
             chunk_size=600, chunk_overlap=100,
         )
         assert len(chunks) > 1
 
     def test_chunk_word_count_does_not_exceed_size(self):
-        text = self._make_words(2000)
+        words_list = self._make_words_list(2000)
         chunks = chunk_page_text(
-            text=text, document_id="doc1", document_name="doc1.pdf",
+            words_list=words_list, document_id="doc1", document_name="doc1.pdf",
             page_number=1, source_path="data/pdfs/doc1.pdf",
             chunk_size=600, chunk_overlap=100,
         )
@@ -39,9 +39,9 @@ class TestChunkPageText:
             assert wc <= 600, f"Chunk has {wc} words, expected <= 600"
 
     def test_chunk_ids_are_unique(self):
-        text = self._make_words(2000)
+        words_list = self._make_words_list(2000)
         chunks = chunk_page_text(
-            text=text, document_id="doc1", document_name="doc1.pdf",
+            words_list=words_list, document_id="doc1", document_name="doc1.pdf",
             page_number=1, source_path="data/pdfs/doc1.pdf",
             chunk_size=600, chunk_overlap=100,
         )
@@ -49,21 +49,21 @@ class TestChunkPageText:
         assert len(ids) == len(set(ids)), "Duplicate chunk IDs found"
 
     def test_metadata_fields_present(self):
-        text = self._make_words(100)
+        words_list = self._make_words_list(100)
         chunks = chunk_page_text(
-            text=text, document_id="my_doc", document_name="my_doc.pdf",
+            words_list=words_list, document_id="my_doc", document_name="my_doc.pdf",
             page_number=5, source_path="data/pdfs/my_doc.pdf",
         )
         expected_keys = {"chunk_id", "document_id", "document_name",
-                         "page_number", "text", "source_path"}
+                         "page_number", "text", "source_path", "locations"}
         for chunk in chunks:
             missing = expected_keys - chunk.keys()
             assert not missing, f"Missing keys: {missing}"
 
     def test_page_number_preserved_in_chunks(self):
-        text = self._make_words(100)
+        words_list = self._make_words_list(100)
         chunks = chunk_page_text(
-            text=text, document_id="doc1", document_name="doc1.pdf",
+            words_list=words_list, document_id="doc1", document_name="doc1.pdf",
             page_number=12, source_path="data/pdfs/doc1.pdf",
         )
         for chunk in chunks:
@@ -71,9 +71,9 @@ class TestChunkPageText:
 
     def test_overlap_creates_shared_words(self):
         """Adjacent chunks should share some words when overlap > 0."""
-        text = self._make_words(700)
+        words_list = self._make_words_list(700)
         chunks = chunk_page_text(
-            text=text, document_id="doc1", document_name="doc1.pdf",
+            words_list=words_list, document_id="doc1", document_name="doc1.pdf",
             page_number=1, source_path="data/pdfs/doc1.pdf",
             chunk_size=400, chunk_overlap=100,
         )
@@ -93,6 +93,7 @@ class TestCreateChunksFromPages:
                 "document": "test.pdf",
                 "page": i + 1,
                 "text": " ".join(f"word{i}_{j}" for j in range(words_per_page)),
+                "words": [{"text": f"word{i}_{j}", "bbox": [0, 0, 10, 10]} for j in range(words_per_page)]
             }
             for i in range(n_pages)
         ]
@@ -116,9 +117,9 @@ class TestCreateChunksFromPages:
 
     def test_empty_pages_skipped(self):
         pages = [
-            {"document": "test.pdf", "page": 1, "text": ""},
-            {"document": "test.pdf", "page": 2, "text": "   "},
-            {"document": "test.pdf", "page": 3, "text": "Real content here."},
+            {"document": "test.pdf", "page": 1, "text": "", "words": []},
+            {"document": "test.pdf", "page": 2, "text": "   ", "words": []},
+            {"document": "test.pdf", "page": 3, "text": "Real content here.", "words": [{"text": "Real", "bbox": [0,0,10,10]}, {"text": "content", "bbox": [0,0,10,10]}, {"text": "here.", "bbox": [0,0,10,10]}]},
         ]
         chunks = create_chunks_from_pages(
             pages=pages, document_id="test",
