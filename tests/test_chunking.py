@@ -1,10 +1,10 @@
 """Tests for text chunking logic."""
 
-import pytest
+import unittest
 from app.services.chunk_service import chunk_page_text, create_chunks_from_pages
 
 
-class TestChunkPageText:
+class TestChunkPageText(unittest.TestCase):
 
     def _make_words_list(self, n):
         return [{"text": f"word{i}", "bbox": [0, 0, 10, 10]} for i in range(n)]
@@ -78,14 +78,14 @@ class TestChunkPageText:
             chunk_size=400, chunk_overlap=100,
         )
         if len(chunks) < 2:
-            pytest.skip("Need at least 2 chunks")
+            raise unittest.SkipTest("Need at least 2 chunks")
 
         words_0 = set(chunks[0]["text"].split())
         words_1 = set(chunks[1]["text"].split())
         assert len(words_0 & words_1) > 0, "No shared words between adjacent chunks"
 
 
-class TestCreateChunksFromPages:
+class TestCreateChunksFromPages(unittest.TestCase):
 
     def _make_pages(self, n_pages, words_per_page=200):
         return [

@@ -34,7 +34,7 @@ function showToast(message, type = 'info', duration = 4000) {
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.appendChild(document.createTextNode(str));
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function scrollToBottom() {
@@ -263,6 +263,19 @@ function setupChatControls() {
       performSearch();
     });
   });
+
+  // event delegation for PDF view buttons
+  chatHistory.addEventListener('click', (e) => {
+    const btn = e.target.closest('.pdf-view-btn');
+    if (btn) {
+      const docId = btn.dataset.docid;
+      const page = parseInt(btn.dataset.page, 10);
+      const docName = btn.dataset.docname;
+      // openPdfViewer expects encoded values for docId and locs
+      const locs = encodeURIComponent(btn.dataset.locs);
+      openPdfViewer(encodeURIComponent(docId), page, docName, locs);
+    }
+  });
 }
 
 function appendUserMessage(text) {
@@ -326,7 +339,11 @@ function appendAssistantMessage(results) {
           </div>
         </div>
         ${safeText}
-        <button class="btn btn--ghost btn--sm" style="display: block; margin-top: 0.5rem;" onclick="openPdfViewer('${encodeURIComponent(docId)}', ${r.page_number}, '${escapeHtml(r.document_name)}', '${encodedLocs}')">
+        <button class="btn btn--ghost btn--sm pdf-view-btn" style="display: block; margin-top: 0.5rem;" 
+                data-docid="${escapeHtml(docId)}" 
+                data-page="${r.page_number}" 
+                data-docname="${escapeHtml(r.document_name)}" 
+                data-locs="${escapeHtml(JSON.stringify(r.locations || []))}">
           [ View Page ${r.page_number} ]
         </button>
       </div>
