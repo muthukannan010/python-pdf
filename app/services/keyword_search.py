@@ -2,6 +2,8 @@
 
 import logging
 import re
+import unicodedata
+from collections import defaultdict
 from typing import Any, Dict, List, Set
 
 from app.database.sqlite_db import SQLiteDB
@@ -27,11 +29,40 @@ STOP_WORDS = {
 }
 
 
+_TOKEN_RE = re.compile(r"[^\W_]+(?:['’][^\W_]+)?", flags=re.UNICODE)
+
+
+def _normalize_token(token: str) -> str:
+    """Normalize tokens consistently with the text stored in SQLite."""
+    token = unicodedata.normalize("NFKC", token).casefold()
+    return token.replace("’", "'").strip("'")
+
+
+def _stem_token(token: str) -> str:
+    """Apply conservative stemming compatible with common Porter results."""
+    token = _normalize_token(token)
+    if len(token) <= 3:
+        return token
+    if token.endswith("ies") and len(token) > 4:
+        return token[:-3] + "y"
+    if token.endswith(("sses", "shes", "ches", "xes", "zes")):
+        return token[:-2]
+    if token.endswith("s") and not token.endswith(("ss", "us")):
+        return token[:-1]
+    if token.endswith("ing") and len(token) > 5:
+        return token[:-3]
+    if token.endswith("ed") and len(token) > 4:
+        return token[:-2]
+    return token
+
+
 def _extract_keywords(query: str) -> Set[str]:
-    """Lowercase, tokenize, remove stop words, return unique terms."""
-    query = query.lower()
-    tokens = re.split(r'[^a-z0-9]+', query)
-    return {t for t in tokens if t and t not in STOP_WORDS}
+    """Tokenize query text, normalize it, and remove stop words."""
+    return {
+        token
+        for raw_token in _TOKEN_RE.findall(query)
+        if (token := _normalize_token(raw_token)) and token not in STOP_WORDS
+    }
 
 
 def _highlight_and_score(text: str, query_keywords: Set[str]):
@@ -42,26 +73,50 @@ def _highlight_and_score(text: str, query_keywords: Set[str]):
     if not query_keywords:
         return 0.0, [], [], text
 
+    query_by_stem = defaultdict(set)
+    for keyword in query_keywords:
+        query_by_stem[_stem_token(keyword)].add(keyword)
+
     matched = set()
-    unmatched = set(query_keywords)
+    token_spans = []
+    for match in _TOKEN_RE.finditer(text):
+        token = _normalize_token(match.group())
+        matching_keywords = query_by_stem.get(_stem_token(token), set())
+        if matching_keywords:
+            matched.update(matching_keywords)
+            token_spans.append((match.start(), match.end()))
 
     highlighted_text = text
-    for kw in query_keywords:
-        pattern = re.compile(rf'\b({re.escape(kw)})\b', flags=re.IGNORECASE)
-        if pattern.search(highlighted_text):
-            matched.add(kw)
-            unmatched.discard(kw)
-            highlighted_text = pattern.sub(r'<mark>\1</mark>', highlighted_text)
+    for start, end in reversed(token_spans):
+        highlighted_text = (
+            highlighted_text[:start]
+            + "<mark>"
+            + highlighted_text[start:end]
+            + "</mark>"
+            + highlighted_text[end:]
+        )
 
     score = (len(matched) / len(query_keywords)) * 100.0
+    unmatched = query_keywords - matched
 
     # truncate really long texts for display
-    words = highlighted_text.split()
+    words = text.split()
     if len(words) > settings.SNIPPET_LENGTH * 2:
-        highlighted_text = " ".join(words[: settings.SNIPPET_LENGTH * 2]) + "..."
-        # make sure we don't leave an unclosed <mark> tag
-        if highlighted_text.count("<mark>") > highlighted_text.count("</mark>"):
-            highlighted_text += "</mark>"
+        display_text = " ".join(words[: settings.SNIPPET_LENGTH * 2])
+        display_spans = []
+        for match in _TOKEN_RE.finditer(display_text):
+            if _stem_token(_normalize_token(match.group())) in query_by_stem:
+                display_spans.append((match.start(), match.end()))
+        highlighted_text = display_text
+        for start, end in reversed(display_spans):
+            highlighted_text = (
+                highlighted_text[:start]
+                + "<mark>"
+                + highlighted_text[start:end]
+                + "</mark>"
+                + highlighted_text[end:]
+            )
+        highlighted_text += "..."
 
     return score, sorted(list(matched)), sorted(list(unmatched)), highlighted_text
 
@@ -82,11 +137,17 @@ class KeywordSearchService:
             logger.debug("KeywordSearch: query=%r has no meaningful keywords", query)
             return []
 
+        query_stems = {_stem_token(keyword) for keyword in keywords}
+
         # build FTS query: "word1" OR "word2" etc
         fts_query = " OR ".join(f'"{kw}"' for kw in keywords)
 
         # grab extra candidates so we can re-score them properly
         candidates = self._db.keyword_search(query=fts_query, top_k=max(top_k * 5, 50))
+
+        query_by_stem = defaultdict(set)
+        for keyword in keywords:
+            query_by_stem[_stem_token(keyword)].add(keyword)
 
         results = []
         for c in candidates:
@@ -102,9 +163,12 @@ class KeywordSearchService:
                 if "locations" in c:
                     filtered_locs = []
                     for loc in c["locations"]:
-                        loc_text = loc["text"].lower()
-                        # check if any matched kw is in this loc's text
-                        if any(kw in loc_text for kw in matched):
+                        loc_text = loc.get("text", "")
+                        if any(
+                            _stem_token(_normalize_token(token))
+                            in query_by_stem
+                            for token in _TOKEN_RE.findall(loc_text)
+                        ):
                             filtered_locs.append(loc)
                     c["locations"] = filtered_locs
                     
