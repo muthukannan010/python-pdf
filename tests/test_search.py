@@ -86,6 +86,19 @@ class TestKeywordSearch:
         assert len(results) > 0
         assert results[0]["keyword_score"] == 100.0
 
+    def test_stemmed_variants_are_matched_and_highlighted(self, db):
+        from app.services.keyword_search import KeywordSearchService
+        svc = KeywordSearchService(db=db)
+        results = svc.search("employee", top_k=5)
+        assert results[0]["matched_keywords"] == ["employee"]
+        assert "<mark>employees</mark>" in results[0]["text"].lower()
+
+    def test_highlight_does_not_match_substrings(self, db):
+        from app.services.keyword_search import KeywordSearchService
+        svc = KeywordSearchService(db=db)
+        results = svc.search("art", top_k=5)
+        assert results == []
+
     def test_keyword_highlighting(self, db):
         from app.services.keyword_search import KeywordSearchService
         svc = KeywordSearchService(db=db)

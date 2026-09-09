@@ -172,18 +172,18 @@ async function loadDocuments() {
     if (docs.length === 0) {
       empty.classList.remove('hidden');
       list.querySelectorAll('.doc-item').forEach(el => el.remove());
-      
+
       const subtitle = document.querySelector('.empty-subtitle');
       if (subtitle) subtitle.textContent = 'Upload a document and start searching.';
       const uploadBtn = document.getElementById('empty-upload-trigger');
       if (uploadBtn) uploadBtn.classList.remove('hidden');
-      
+
       return;
     }
 
     empty.classList.add('hidden');
     list.querySelectorAll('.doc-item').forEach(el => el.remove());
-    
+
     const subtitle = document.querySelector('.empty-subtitle');
     if (subtitle) subtitle.textContent = 'Your documents are ready. Ask a question below!';
     const uploadBtn = document.getElementById('empty-upload-trigger');
@@ -299,8 +299,66 @@ function appendSystemMessage(text) {
   chatHistory.insertBefore(bubble, typingIndicator);
   scrollToBottom();
 }
+const STOP_WORDS = new Set([
+  "the", "is", "a", "an", "of", "to", "in", "for", "and", "how", "what",
+  "where", "when", "why", "who", "which", "are", "was", "were", "be",
+  "been", "being", "have", "has", "had", "do", "does", "did", "but",
+  "if", "or", "because", "as", "until", "while", "at", "by", "with",
+  "about", "against", "between", "into", "through", "during", "before",
+  "after", "above", "below", "from", "up", "down", "out", "on", "off",
+  "over", "under", "again", "further", "then", "once", "here", "there",
+  "all", "any", "both", "each", "few", "more", "most", "other", "some",
+  "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too",
+  "very", "s", "t", "can", "will", "just", "don", "should", "now"
+]);
 
-function appendAssistantMessage(results) {
+function getMatchedLocations(locations, query, matchedKeywords = []) {
+  if (!Array.isArray(locations) || locations.length === 0) {
+    return [];
+  }
+
+  let queryWords = (matchedKeywords || []).map(w => w.toLowerCase());
+
+  if (queryWords.length === 0) {
+    queryWords = query
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w && !STOP_WORDS.has(w));
+  }
+
+  if (queryWords.length === 0) {
+    return locations;
+  }
+
+  const matched = [];
+
+  locations.forEach((loc) => {
+    if (!loc || !loc.text || !loc.bbox) {
+      return;
+    }
+
+    const locationText = loc.text.toLowerCase();
+
+    const isMatch = queryWords.some((word) => {
+      // Use index of to see if word is contained
+      // and maybe check boundaries, but simple includes is safer if bounding box text is weird
+      // Let's just use includes, but only for words > 2 chars to avoid partial matches
+      if (word.length > 2) {
+        return locationText.includes(word);
+      }
+      return locationText === word;
+    });
+
+    if (isMatch) {
+      matched.push(loc);
+    }
+  });
+
+  return matched;
+}
+
+function appendAssistantMessage(results, query = '') {
   if (!results || results.length === 0) {
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble-wrapper assistant';
@@ -326,7 +384,10 @@ function appendAssistantMessage(results) {
     safeText = safeText.replace(/\[\[MARK\]\]/g, '<mark>').replace(/\[\[\/MARK\]\]/g, '</mark>');
 
     const docId = r.source_path.replace('data/pdfs/', '').replace('.pdf', '');
-    const encodedLocs = encodeURIComponent(JSON.stringify(r.locations || []));
+    
+    // Process locations to only keep matched ones
+    const matchedLocs = getMatchedLocations(r.locations || [], query, r.matched_keywords || []);
+    const encodedLocs = encodeURIComponent(JSON.stringify(matchedLocs));
 
     bubble.innerHTML = `
       <div class="chat-bubble assistant">
@@ -343,7 +404,7 @@ function appendAssistantMessage(results) {
                 data-docid="${escapeHtml(docId)}" 
                 data-page="${r.page_number}" 
                 data-docname="${escapeHtml(r.document_name)}" 
-                data-locs="${escapeHtml(JSON.stringify(r.locations || []))}">
+                data-locs="${encodedLocs}">
           [ View Page ${r.page_number} ]
         </button>
       </div>
@@ -387,7 +448,7 @@ async function performSearch() {
     }
 
     const data = await res.json();
-    appendAssistantMessage(data.results);
+    appendAssistantMessage(data.results, query);
 
   } catch {
     typingIndicator.classList.add('hidden');
@@ -404,10 +465,10 @@ function openPdfViewer(encodedDocId, pageNumber, docName, encodedLocs = '[]') {
 
   title.textContent = `${docName} — Page ${pageNumber}`;
   modal.classList.remove('hidden');
-  
+
   const pdfUrl = `${API}/documents/${encodedDocId}/view`;
   renderPdfPage(pdfUrl, pageNumber, locations);
-  
+
   document.getElementById('modal-close-btn').focus();
 }
 
@@ -417,38 +478,38 @@ async function renderPdfPage(url, pageNum, locations) {
   const canvas = document.getElementById('pdf-canvas');
   const ctx = canvas.getContext('2d');
   const layer = document.getElementById('pdf-highlights-layer');
-  
+
   layer.innerHTML = '';
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
   try {
     if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
-       window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/lib/pdf.worker.min.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/lib/pdf.worker.min.js';
     }
-    
+
     currentPdfTask = window.pdfjsLib.getDocument(url);
     const pdfDoc = await currentPdfTask.promise;
     const page = await pdfDoc.getPage(pageNum);
-    
+
     const scale = 1.5;
     const viewport = page.getViewport({ scale: scale });
-    
+
     canvas.height = viewport.height;
     canvas.width = viewport.width;
-    
+
     const renderContext = {
       canvasContext: ctx,
       viewport: viewport
     };
     await page.render(renderContext).promise;
-    
+
     locations.forEach(loc => {
       const bbox = loc.bbox;
       const x0 = bbox[0] * scale;
       const y0 = bbox[1] * scale;
       const x1 = bbox[2] * scale;
       const y1 = bbox[3] * scale;
-      
+
       const div = document.createElement('div');
       div.style.position = 'absolute';
       div.style.left = `${x0}px`;
@@ -460,15 +521,15 @@ async function renderPdfPage(url, pageNum, locations) {
       div.style.borderRadius = '2px';
       layer.appendChild(div);
     });
-    
+
     // attempt to scroll into view of the first highlight
     if (locations.length > 0) {
-        const container = document.getElementById('pdf-viewer-container');
-        const firstBbox = locations[0].bbox;
-        // scroll container so the highlight is somewhat centered
-        container.scrollTop = Math.max(0, (firstBbox[1] * scale) - (container.clientHeight / 2));
+      const container = document.getElementById('pdf-viewer-container');
+      const firstBbox = locations[0].bbox;
+      // scroll container so the highlight is somewhat centered
+      container.scrollTop = Math.max(0, (firstBbox[1] * scale) - (container.clientHeight / 2));
     }
-    
+
   } catch (err) {
     console.error('Error rendering PDF:', err);
   }
@@ -476,8 +537,8 @@ async function renderPdfPage(url, pageNum, locations) {
 
 function closePdfViewer() {
   if (currentPdfTask) {
-      currentPdfTask.destroy();
-      currentPdfTask = null;
+    currentPdfTask.destroy();
+    currentPdfTask = null;
   }
   document.getElementById('pdf-modal').classList.add('hidden');
   const canvas = document.getElementById('pdf-canvas');
