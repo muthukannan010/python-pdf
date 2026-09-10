@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import fitz  # PyMuPDF
+# pyrefly: ignore [missing-import]
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 from PIL import Image

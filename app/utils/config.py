@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     TOP_K: int = 5
     KEYWORD_WEIGHT: float = 0.4
     SEMANTIC_WEIGHT: float = 0.6
-    MAX_FILE_SIZE_MB: int = 50
+    MAX_FILE_SIZE_MB: int = 500
     SNIPPET_LENGTH: int = 60
 
     model_config = SettingsConfigDict(
