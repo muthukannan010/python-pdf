@@ -268,11 +268,11 @@ function setupChatControls() {
   chatHistory.addEventListener('click', (e) => {
     const btn = e.target.closest('.pdf-view-btn');
     if (btn) {
-      const docId = btn.dataset.docid;
+      const docId = btn.dataset.docId;
       const page = parseInt(btn.dataset.page, 10);
       const docName = btn.dataset.docname;
       // openPdfViewer expects encoded values for docId and locs
-      const locs = encodeURIComponent(btn.dataset.locs);
+      const locs = btn.dataset.locs; // already encoded when inserted into DOM
       openPdfViewer(encodeURIComponent(docId), page, docName, locs);
     }
   });
@@ -401,7 +401,7 @@ function appendAssistantMessage(results, query = '') {
         </div>
         ${safeText}
         <button class="btn btn--ghost btn--sm pdf-view-btn" style="display: block; margin-top: 0.5rem;" 
-                data-docid="${escapeHtml(docId)}" 
+                data-doc-id="${r.document_id}" 
                 data-page="${r.page_number}" 
                 data-docname="${escapeHtml(r.document_name)}" 
                 data-locs="${encodedLocs}">

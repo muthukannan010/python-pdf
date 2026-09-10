@@ -51,6 +51,7 @@ class HighlightLocation(BaseModel):
 
 class SearchResult(BaseModel):
     chunk_id: str
+    document_id: str
     document_name: str
     page_number: int
     score: float

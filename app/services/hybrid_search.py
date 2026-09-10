@@ -113,6 +113,7 @@ class HybridSearchService:
 
             merged[cid] = {
                 "chunk_id": cid,
+                "document_id": r["document_id"],
                 "document_name": r["document_name"],
                 "page_number": r["page_number"],
                 "text": r["text"],
@@ -174,6 +175,7 @@ class HybridSearchService:
 
                 merged[cid] = {
                     "chunk_id": cid,
+                    "document_id": r.get("document_id", ""),
                     "document_name": r.get(
                         "document_name",
                         "",

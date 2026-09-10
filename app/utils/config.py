@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # Server
     HOST: str = "0.0.0.0"
-    PORT: int = 8001
+    PORT: int = 8005
     DEBUG: bool = False
 
     # Paths

@@ -206,6 +206,7 @@ async def search(
     search_results = [
         SearchResult(
             chunk_id=r["chunk_id"],
+            document_id=r.get("document_id", r["document_name"]),
             document_name=r["document_name"],
             page_number=r["page_number"],
             score=round(r["score"], 4),
