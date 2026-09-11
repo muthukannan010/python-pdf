@@ -113,11 +113,11 @@ class HybridSearchService:
 
             merged[cid] = {
                 "chunk_id": cid,
-                "document_id": r["document_id"],
-                "document_name": r["document_name"],
-                "page_number": r["page_number"],
-                "text": r["text"],
-                "source_path": r["source_path"],
+                "document_id": r.get("document_id", ""),
+                "document_name": r.get("document_name", ""),
+                "page_number": r.get("page_number", 0),
+                "text": r.get("text", ""),
+                "source_path": r.get("source_path", ""),
 
                 # Scores
                 "keyword_score": float(
