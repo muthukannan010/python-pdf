@@ -41,7 +41,7 @@ def validate_pdf_bytes(data: bytes, filename: str):
     """Check that the uploaded bytes are actually a valid PDF and not too large."""
 
     if len(data) == 0:
-        raise PDFProcessingError("Uploaded file is empty.")
+        raise PDFProcessingError("Uploaded file is empty.") 
 
     if len(data) > _MAX_BYTES:
         raise PDFProcessingError(
