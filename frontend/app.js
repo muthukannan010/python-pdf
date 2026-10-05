@@ -66,8 +66,6 @@ async function checkHealth() {
 function setupSettings() {
   const btn = document.getElementById('settings-btn');
   const dropdown = document.getElementById('settings-dropdown');
-  const kwSlider = document.getElementById('kw-weight-input');
-  const kwVal = document.getElementById('kw-weight-val');
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -79,10 +77,6 @@ function setupSettings() {
     if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
       dropdown.classList.add('hidden');
     }
-  });
-
-  kwSlider.addEventListener('input', () => {
-    kwVal.textContent = kwSlider.value;
   });
 }
 
@@ -421,7 +415,6 @@ async function performSearch() {
   if (!query) return;
 
   const topK = parseInt(document.getElementById('top-k-input').value, 10);
-  const kwWeight = parseFloat(document.getElementById('kw-weight-input').value);
 
   appendUserMessage(query);
   chatInput.value = '';
@@ -435,7 +428,7 @@ async function performSearch() {
     const res = await fetch(`${API}/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, top_k: topK, keyword_weight: kwWeight }),
+      body: JSON.stringify({ query, top_k: topK }),
     });
 
     typingIndicator.classList.add('hidden');
