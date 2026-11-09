@@ -73,7 +73,8 @@ PDF Service        Search Service
 │   └── index/
 ├── tests/
 ├── requirements.txt
-└── run.py
+├── main.py                      # Application entry point
+└── run.py                       # Compatibility entry point
 ```
 
 ## Setup
@@ -97,7 +98,7 @@ pip install -r requirements.txt
 ## Running
 
 ```powershell
-python run.py
+python main.py
 ```
 
 Open http://localhost:8000 in your browser.
