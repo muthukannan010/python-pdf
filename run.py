@@ -1,12 +1,5 @@
-"""Entry point - starts the FastAPI server."""
-import uvicorn
-from app.utils.config import settings
+"""Compatibility entry point; use main.py to start the server."""
+from main import main
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        log_level="info",
-    )
+    main()
